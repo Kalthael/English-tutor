@@ -11,3 +11,10 @@ export interface TranscriptMessage {
   feedback?: string;
   audio?: Blob;
 }
+
+export interface Conversation {
+  id: string;
+  title: string;
+  transcript: TranscriptMessage[];
+  createdAt: string;
+}

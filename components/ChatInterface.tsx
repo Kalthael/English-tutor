@@ -1,16 +1,22 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { ConnectionState, TranscriptMessage } from '../types';
-import { connectToGemini } from '../services/geminiService';
+import { ConnectionState, TranscriptMessage, Conversation } from '../types';
+import { connectToGemini, getConversationTitle } from '../services/geminiService';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 import { ConnectButton } from './ConnectButton';
 import { Transcript } from './Transcript';
 import { Header } from './Header';
 import { Footer } from './Footer';
+import { HistorySidebar } from './HistorySidebar';
 
 type LiveSession = Awaited<ReturnType<typeof connectToGemini>>['session'];
 
 export const ChatInterface: React.FC = () => {
   const [connectionState, setConnectionState] = useState<ConnectionState>(ConnectionState.IDLE);
   const [transcript, setTranscript] = useState<TranscriptMessage[]>([]);
+  
+  const [conversations, setConversations] = useLocalStorage<Conversation[]>('conversations', []);
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+
   const sessionRef = useRef<LiveSession | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -43,18 +49,40 @@ export const ChatInterface: React.FC = () => {
     }
   }, []);
 
+  const saveConversation = async () => {
+    // Only save new conversations that have more than the initial system message
+    if (!currentChatId && transcript.length > 1) {
+        console.log("Saving conversation...");
+        const title = await getConversationTitle(transcript);
+        const newConversation: Conversation = {
+            id: Date.now().toString(),
+            title,
+            transcript,
+            createdAt: new Date().toISOString(),
+        };
+        setConversations(prev => [newConversation, ...prev]);
+        console.log("Conversation saved.");
+    }
+  };
+
   const handleToggleConnection = useCallback(async () => {
     if (connectionState === ConnectionState.CONNECTED) {
       // --- DISCONNECT ---
       setConnectionState(ConnectionState.IDLE);
+      await saveConversation();
       await cleanup();
       setTranscript(prev => [...prev, { role: 'system', content: 'Session ended.' }]);
     } else if (connectionState === ConnectionState.IDLE || connectionState === ConnectionState.ERROR) {
       // --- CONNECT ---
+      // If we are connecting on a loaded chat, we should start a new one.
+      if (currentChatId) {
+          setCurrentChatId(null);
+          setTranscript([]);
+      }
       setConnectionState(ConnectionState.CONNECTING);
-      setTranscript([{ role: 'system', content: 'Connecting to AI Coach...' }]);
+      // Use a function for setTranscript to avoid stale state in callbacks
+      setTranscript(() => [{ role: 'system', content: 'Connecting to AI Coach...' }]);
       
-      // Clean up previous failed attempts before starting a new one
       await cleanup();
 
       try {
@@ -83,8 +111,34 @@ export const ChatInterface: React.FC = () => {
         setTranscript(prev => [...prev, { role: 'system', content: 'Connection failed. Please try again.' }]);
       }
     }
-  }, [connectionState, cleanup]);
+  }, [connectionState, cleanup, transcript, currentChatId, setConversations]);
   
+  const handleNewChat = useCallback(() => {
+    if (connectionState === ConnectionState.CONNECTED) {
+        return;
+    }
+    setCurrentChatId(null);
+    setTranscript([]);
+  }, [connectionState]);
+
+  const handleSelectChat = useCallback((id: string) => {
+    if (connectionState === ConnectionState.CONNECTED) {
+        return; // Can't switch chats while connected
+    }
+    const conversation = conversations.find(c => c.id === id);
+    if (conversation) {
+        setCurrentChatId(id);
+        setTranscript(conversation.transcript);
+    }
+  }, [conversations, connectionState]);
+
+  const handleDeleteChat = useCallback((id: string) => {
+    setConversations(prev => prev.filter(c => c.id !== id));
+    if (currentChatId === id) {
+        handleNewChat();
+    }
+  }, [currentChatId, setConversations, handleNewChat]);
+
   // Effect for cleaning up on component unmount
   useEffect(() => {
     return () => {
@@ -92,21 +146,32 @@ export const ChatInterface: React.FC = () => {
     };
   }, [cleanup]);
 
+  const sortedConversations = [...conversations].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
   return (
-    <div className="flex flex-col h-screen bg-gray-900 text-gray-100 font-sans">
-      <Header />
-      <main className="flex-1 flex flex-col items-center justify-center p-4 overflow-hidden">
-        <div className="w-full max-w-4xl h-full flex flex-col bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-700">
-          <Transcript transcript={transcript} />
-          <div className="p-6 bg-gray-800 border-t border-gray-700">
-            <ConnectButton
-              connectionState={connectionState}
-              onClick={handleToggleConnection}
-            />
+    <div className="flex h-screen bg-gray-900 text-gray-100 font-sans">
+       <HistorySidebar
+        conversations={sortedConversations}
+        currentChatId={currentChatId}
+        onSelectChat={handleSelectChat}
+        onNewChat={handleNewChat}
+        onDeleteChat={handleDeleteChat}
+      />
+      <div className="flex-1 flex flex-col">
+        <Header />
+        <main className="flex-1 flex flex-col items-center justify-center p-4 overflow-hidden">
+          <div className="w-full max-w-4xl h-full flex flex-col bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-700">
+            <Transcript transcript={transcript} />
+            <div className="p-6 bg-gray-800 border-t border-gray-700">
+              <ConnectButton
+                connectionState={connectionState}
+                onClick={handleToggleConnection}
+              />
+            </div>
           </div>
-        </div>
-      </main>
-      <Footer />
+        </main>
+        <Footer />
+      </div>
     </div>
   );
 }

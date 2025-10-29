@@ -61,3 +61,21 @@ export const GoogleIcon: React.FC<SVGProps> = (props) => (
         <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C39.904,36.218,44,30.668,44,24C44,22.659,43.862,21.35,43.611,20.083z" />
     </svg>
 );
+
+export const PlusIcon: React.FC<SVGProps> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+  </svg>
+);
+
+export const ChatBubbleLeftRightIcon: React.FC<SVGProps> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193l-3.722.537a59.043 59.043 0 0 1-3.58 0l-3.722-.537C3.347 17.087 2.5 16.123 2.5 15v-4.286c0-.97.616-1.813 1.5-2.097m16.25 0a2.469 2.469 0 0 0-2.469-2.469H4.969A2.469 2.469 0 0 0 2.5 8.511m16.25 0-3.375 2.25m-12.875 0 3.375 2.25m3.375-3.375a3.113 3.113 0 0 1 3.113 3.113V15.75m-6.225 0a3.113 3.113 0 0 0-3.113-3.113m3.113 3.113v-1.125a.375.375 0 0 1 .375-.375h1.5a.375.375 0 0 1 .375.375v1.125m-3.375 0a3.113 3.113 0 0 1-3.113-3.113V9.375m0-1.125a.375.375 0 0 1 .375-.375h.375a.375.375 0 0 1 .375.375v1.125m0 0a3.113 3.113 0 0 0 3.113 3.113m0 0a3.113 3.113 0 0 1 3.113-3.113" />
+  </svg>
+);
+
+export const TrashIcon: React.FC<SVGProps> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.124-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.077-2.09.921-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+  </svg>
+);

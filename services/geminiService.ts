@@ -1,19 +1,31 @@
+
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 // Fix: Import React types to resolve type errors.
 import type { Dispatch, SetStateAction } from 'react';
 import type { TranscriptMessage } from '../types';
 
 // --- Gemini System Instruction ---
-const SYSTEM_INSTRUCTION = `You are a friendly and encouraging English language tutor. Your name is Alex. 
-Engage in a natural conversation with the user. After each user response, first reply conversationally. 
-Then, on a new line, provide a 'Feedback:' section. 
-In this section, gently correct any grammatical mistakes and offer suggestions for better pronunciation. 
-Keep your feedback concise and positive. If there are no mistakes, compliment them on their good English.
-For example:
-User: "I go to the store yesterday."
+const SYSTEM_INSTRUCTION = `You are a friendly and encouraging English language tutor. Your name is Alex.
+Engage in a natural conversation with the user. After each user response, first reply conversationally.
+Then, on a new line, provide a 'Feedback:' section.
+In this section, provide detailed and constructive feedback on their English. Your feedback should cover two main areas:
+
+1.  **Grammar:** Gently correct any grammatical mistakes. If there are none, praise their correct grammar.
+2.  **Pronunciation & Fluency:** This is the most important part. Listen carefully to their speech and provide specific, actionable advice.
+    *   **Phonemes:** Pinpoint specific words or sounds they mispronounced. For example, "In the word 'three', try to make the 'th' sound by placing your tongue between your teeth."
+    *   **Intonation & Stress:** Comment on their sentence melody. For instance, "When you ask a question like 'How are you?', your voice should rise slightly at the end." or "In the word 'important', the stress should be on the second syllable: im-POR-tant."
+    *   **Practice Exercise:** Suggest a short, simple exercise to help them improve. For example, "Try saying this sentence, focusing on the 'th' sound: 'I think there are three trees there.'"
+
+Keep your feedback concise, positive, and easy to understand. Always be encouraging! If there are no mistakes, compliment them on their excellent English.
+
+Example:
+User: "I am happy to see you. Where you are from?"
 Your Response:
-It sounds like you had a busy day! What did you get from the store?
-Feedback: Great sentence! Just a small correction: since it was yesterday, you would say "I went to the store yesterday." Keep up the great work!`;
+I'm happy to see you too! I'm from a place full of data and algorithms. How about you?
+Feedback:
+**Grammar:** Great start! Just a tiny correction for your question: it should be "Where are you from?".
+**Pronunciation & Fluency:** You have a very clear voice! I noticed in the word "where", the 'r' sound was a little soft. Try to curl your tongue back a bit more to make it stronger.
+**Practice Exercise:** Let's practice the 'r' sound. Try saying: "Red rabbits run really rapidly."`;
 
 // --- Audio Processing Helper Functions ---
 function encode(bytes: Uint8Array): string {
@@ -123,6 +135,41 @@ function createWavBlob(audioChunks: Float32Array[], sampleRate: number): Blob | 
     return new Blob([header, pcmData], { type: 'audio/wav' });
 }
 
+// --- Conversation Title Generation ---
+export const getConversationTitle = async (transcript: TranscriptMessage[]): Promise<string> => {
+    if (!process.env.API_KEY) {
+        throw new Error("API_KEY environment variable not set");
+    }
+
+    // Filter out system messages and format the conversation for the prompt
+    const conversationText = transcript
+        .filter(msg => msg.role === 'user' || msg.role === 'model')
+        .map(msg => `${msg.role}: ${msg.content}`)
+        .join('\n');
+
+    if (conversationText.length === 0) {
+        return "New Conversation";
+    }
+
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const prompt = `Based on the following conversation, create a very short, concise title (5 words or less).
+    
+    Conversation:
+    ${conversationText}
+    
+    Title:`;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+        });
+        return response.text.trim() || "Untitled Conversation";
+    } catch (error) {
+        console.error("Error generating conversation title:", error);
+        return "Untitled Conversation";
+    }
+};
 
 // --- Main Service Function ---
 export const connectToGemini = async (
@@ -217,7 +264,7 @@ export const connectToGemini = async (
                 if (lastModelMessageIndex !== -1) {
                     const last = newTranscript[lastModelMessageIndex];
                      if (last.content && !last.feedback) {
-                        const [content, feedback] = last.content.split('Feedback:');
+                        const [content, feedback] = last.content.split(/Feedback:/i);
                         const updatedLast = {
                             ...last,
                             content: content.trim(),
