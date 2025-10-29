@@ -1,0 +1,7 @@
+{
+  "name": "Copy of AI Language Coach",
+  "description": "A real-time AI-powered language coach that helps you improve your grammar and pronunciation through conversation.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
